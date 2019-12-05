@@ -34,6 +34,8 @@ endif()
 ### include module
 add_subdirectory(base)
 
+add_subdirectory(memery)
+
 add_subdirectory(test)
 
 
