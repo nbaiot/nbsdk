@@ -6,7 +6,7 @@
 
 #include <fifo_buffer.h>
 
-namespace fighter {
+namespace nbsdk::memory {
 
 FifoBuffer::FifoBuffer(size_t length)
     : buffer_(new char[length]),
