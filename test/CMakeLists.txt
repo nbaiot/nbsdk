@@ -6,4 +6,4 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 add_executable(test ${SRCS})
 
-target_link_libraries(test nb_base)
+target_link_libraries(test nb_base nb_math)
