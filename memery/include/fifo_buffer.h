@@ -10,7 +10,7 @@
 #include <mutex>
 #include <cstdio>
 
-namespace fighter {
+namespace nbsdk::memory {
 
 class FifoBuffer {
 
