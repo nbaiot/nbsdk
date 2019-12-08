@@ -9,8 +9,11 @@
 
 #include <math/include/gcc_phat.h>
 
+#include "xmos_capture.h"
+
 using namespace nbsdk::base;
 using namespace nbsdk::math;
+using namespace xmos;
 
 void rotate(std::vector<int16_t>& out, const std::vector<int16_t>& in, int rot) {
   int n = in.size();
@@ -20,9 +23,7 @@ void rotate(std::vector<int16_t>& out, const std::vector<int16_t>& in, int rot) 
   }
 }
 
-int main() {
-  LOG_INFO() << ">>>>>>>>>>>>>>>test nbsdk nlog";
-
+void test() {
   sp<GCCPhat> gccPhat = std::make_shared<GCCPhat>(8192);
   int    true_delay = 110;  /* The "true" delay value. This is the answer we are looking for. */
   double amp = 1.0;       /* amplitude of the sine wave - arbitrary */
@@ -51,5 +52,56 @@ int main() {
   std::cout << "Delay: " << true_delay << "\n"
             << "Calculated Delay: " << distance << "\n";
 
+}
+
+FILE* file = nullptr;
+FILE* file1 = nullptr;
+FILE* file2 = nullptr;
+FILE* file3 = nullptr;
+FILE* file4 = nullptr;
+int main() {
+  LOG_INFO() << ">>>>>>>>>>>>>>>test nbsdk nlog";
+//  file = fopen("xmos0.pcm", "w+");
+//  file1 = fopen("xmos1.pcm", "w+");
+//  file2 = fopen("xmos2.pcm", "w+");
+//  file3 = fopen("xmos3.pcm", "w+");
+//  file4 = fopen("xmos4.pcm", "w+");
+
+  float mis = 2;
+  sp<GCCPhat> gccPhat = std::make_shared<GCCPhat>(160 * mis);
+  auto xmosCapture = std::make_shared<XmosCapture>("plughw:1", 5, 16000);
+  /// 200ms
+  xmosCapture->SetFrameSize(2 * 160 * 5 * mis);
+  xmosCapture->SetFrameCallback([gccPhat, mis](const sp<AudioFrame16>& frame){
+//    LOG_INFO() << ">>>>>>>>>>>>>frame size:" << frame->size() / 5 / 2;
+      auto da0 = std::dynamic_pointer_cast<XmosFrame>(frame)->channelData(0)->data();
+      auto da1 = std::dynamic_pointer_cast<XmosFrame>(frame)->channelData(1)->data();
+      auto da2 = std::dynamic_pointer_cast<XmosFrame>(frame)->channelData(2)->data();
+      auto da3 = std::dynamic_pointer_cast<XmosFrame>(frame)->channelData(3)->data();
+      auto da4 = std::dynamic_pointer_cast<XmosFrame>(frame)->channelData(4)->data();
+//      fwrite(da0, 1, 4410 * 2, file);
+//      fwrite(da1, 1, 4410 * 2, file1);
+//      fwrite(da2, 1, 4410 * 2, file2);
+//   `   fwrite(da3, 1, 4410 * 2, file3);
+//      fwrite(da4, 1, 4410 * 2, file4);
+      int distance12 = gccPhat->Execute((int16_t*)da1, (int16_t*)da2, frame->size() / 5 / 2,  10);
+      int distance13 = gccPhat->Execute((int16_t*)da1, (int16_t*)da3, frame->size() / 5 / 2,  10);
+      int distance14 = gccPhat->Execute((int16_t*)da1, (int16_t*)da4, frame->size() / 5 / 2,  10);
+      LOG_INFO() << ">>>>>>>>>distance12:" << 100 * distance12 * 340 / 44100;
+      LOG_INFO() << ">>>>>>>>>distance13:" << 100 *distance13 * 340 / 44100;
+      LOG_INFO() << ">>>>>>>>>distance14:" << 100 *distance14* 340 / 44100;
+      LOG_INFO() << "==========================================================";
+  });
+  xmosCapture->Open();
+  xmosCapture->Start();
+  while (1) {
+    sleep(1);
+  }
+//  sleep(10);
+//  fclose(file);
+//  fclose(file1);
+//  fclose(file2);
+//  fclose(file3);
+//  fclose(file4);
   return 0;
 }
