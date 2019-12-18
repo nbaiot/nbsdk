@@ -33,6 +33,7 @@ if(Boost_FOUND)
     MESSAGE( STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}")
 endif()
 
+### for fftw3
 find_package(FFTW3 REQUIRED)
 if(FFTW3_FOUND)
     include_directories(${FFTW3_INCLUDES})
@@ -40,6 +41,14 @@ if(FFTW3_FOUND)
     message(STATUS "    libraries: ${FFTW3_LIBRARIES}")
 endif()
 
+### for webrtc
+if(ANDROID)
+
+elseif(UNIX)
+include_directories(third/webrtc/x86_64/include/webrtc_audio_processing)
+link_directories(third/webrtc/x86_64/lib)
+add_definitions(-DWEBRTC_POSIX)
+endif()
 
 ### include module
 add_subdirectory(base)
