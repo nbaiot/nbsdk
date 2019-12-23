@@ -11,6 +11,10 @@ message(STATUS "CXX compiler: ${CMAKE_CXX_COMPILER}, version: "
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}, version: "
         "${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 
+
+### build type
+set(CMAKE_BUILD_TYPE Release)
+
 ### for platform
 if(ANDROID)
     add_definitions(-DOS_ANDROID)
@@ -56,6 +60,8 @@ add_subdirectory(base)
 add_subdirectory(memery)
 
 add_subdirectory(math)
+
+add_subdirectory(net)
 
 add_subdirectory(test)
 
