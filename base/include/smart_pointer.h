@@ -8,7 +8,7 @@
 
 #include <memory>
 
-namespace nbsdk::base {
+namespace nbsdk {
 
 template<typename T>
 using sp = std::shared_ptr<T>;

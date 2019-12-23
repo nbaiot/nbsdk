@@ -11,8 +11,6 @@
 #include "fft.h"
 
 
-using namespace nbsdk::base;
-
 namespace nbsdk::math {
 
 class FTTFactory {
