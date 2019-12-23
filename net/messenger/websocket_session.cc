@@ -76,6 +76,13 @@ void WebsocketSession::OnConnect(boost::system::error_code ec) {
     }
     return;
   }
+  /// TODO: fixme, add params for protocol
+ /* ws_.async_handshake_ex(host_, "/",
+                         [](boost::beast::websocket::request_type& m)
+                         {
+                             m.insert(boost::beast::http::field::sec_websocket_protocol, "janus-protocol");
+                         },
+                         std::bind(&WebsocketSession::OnHandshake, shared_from_this(), std::placeholders::_1));*/
   ws_.async_handshake(host_, "/",
                       boost::asio::bind_executor(strand_,
                           std::bind(&WebsocketSession::OnHandshake, shared_from_this(), std::placeholders::_1)));
