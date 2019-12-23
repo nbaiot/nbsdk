@@ -25,6 +25,8 @@ public:
 
   void Loop();
 
+  void SyncLoop();
+
   void Exit();
 
   boost::asio::io_context& IOContext();

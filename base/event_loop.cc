@@ -9,7 +9,6 @@ namespace nbsdk::base {
 
 EventLoop::EventLoop(int threadCount)
     : work_guard_(ioc_.get_executor()), thread_count_(threadCount), running_(false) {
-  threads_.reserve(static_cast<unsigned long>(thread_count_ - 1));
 }
 
 EventLoop::~EventLoop() {
@@ -27,6 +26,20 @@ void EventLoop::Loop() {
             ioc_.run();
         });
   }
+}
+
+void EventLoop::SyncLoop() {
+  if (running_)
+    return;
+  running_ = true;
+  ioc_.reset();
+  for (auto i = thread_count_ - 1; i > 0; --i) {
+    threads_.emplace_back(
+        [this] {
+          ioc_.run();
+        });
+  }
+  ioc_.run();
 }
 
 void EventLoop::Exit() {
