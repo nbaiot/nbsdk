@@ -25,6 +25,9 @@ class Builder {
 
 };
 
+/// boost::beast::http::response
+/// boost::beast::http::header
+
 class HttpResponse {
 
 private:

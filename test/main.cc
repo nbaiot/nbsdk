@@ -4,9 +4,8 @@
 
 #include <iostream>
 
-#include <webrtc/modules/audio_processing/include/audio_processing.h>
+#include <boost/beast.hpp>
 
 int main() {
-  auto apm = webrtc::AudioProcessing::Create();
   return 0;
 }

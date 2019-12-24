@@ -14,6 +14,8 @@
 
 #include "http_defines.h"
 
+/// boost::beast::http::request
+
 namespace nbsdk::net {
 
 class HttpRequest;
@@ -33,7 +35,6 @@ public:
 
   Builder& Url(const std::string& url);
 
-  Builder&
 
 private:
   HttpProtocol protocol_;
