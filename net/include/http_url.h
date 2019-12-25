@@ -7,49 +7,56 @@
 #define NBSDK_HTTP_URL_H
 
 #include <string>
+#include <vector>
 #include <list>
 #include <map>
+#include <set>
 
 namespace nbsdk::net {
+/**
+    http://example.com:8888/over/there?name=ferret#nose
+    \__/ \______________/ \________/\_________/ \__/
 
-namespace httpUrl {
+    |         |              |         |        |
 
-class Builder {
-public:
-  Builder() = default;
-
-  Builder& Scheme(const std::string& scheme);
-
-  /**
-   *
-   * @param host
-   * either a regular hostname, International Domain Name, IPv4 address, or IPv6 address
-   * @return
-   */
-  Builder& Host(const std::string& host);
-
-  Builder& Port(int port);
-
-private:
-  std::string scheme_;
-  std::string host_;
-  int port_{-1};
-  std::list<std::string> encoded_path_segments_;
-  /// TODO: fixme, name 可能重复， value 可能空
-  std::map<std::string, std::string> encoded_query_names_and_values_;
-  std::string encoded_fragment_;
-
-
-};
-}
+ scheme     host           path      query   fragment
+ */
 
 /**
- * https://www.cnblogs.com/tengjiang/p/10344225.html
+ * https://www.cnblogs.com/liuhongfeng/p/5006341.html
  */
 class HttpUrl {
 
+class Builder;
+
 public:
   static int DefaultPort(const std::string& scheme);
+
+  explicit HttpUrl(const Builder& builder);
+
+  explicit HttpUrl(const std::string& url);
+
+  std::string Scheme();
+
+  int Port();
+
+  bool IsHttps();
+
+  std::string Host();
+
+  int PathSize();
+
+  std::string EncodedPath();
+
+  std::string EncodedQuery();
+
+  int QuerySize();
+
+  std::set<std::string> QueryParameter();
+
+  std::string EncodedFragment();
+
+
 private:
   /** http or https */
   std::string scheme_;
@@ -71,10 +78,82 @@ private:
    * non-empty, but never null. Values are null if the name has no corresponding '=' separator, or
    * empty, or non-empty.
    */
-  std::map<std::string, std::string> query_names_and_values_;
+  std::map<std::string, std::set<std::string>> query_names_and_values_;
 
   /** Canonical URL. */
   std::string url_;
+
+
+  class Builder {
+  public:
+    Builder();
+
+    Builder& Scheme(const std::string& scheme);
+
+    /**
+     *
+     * @param host
+     * either a regular hostname, International Domain Name, IPv4 address
+     * TODO: add IPv6 address
+     * @return
+     */
+    Builder& Host(const std::string& host);
+
+    Builder& Port(int port);
+
+    /**
+     * 单一 segment
+     * @param pathSegment
+     * @return
+     */
+    Builder& AddEncodedPathSegment(const std::string& pathSegment);
+
+    /// TODO: fixme
+    ///Builder& AddPathSegment(const std::string& pathSegment);
+
+    /**
+     * 组合 segment
+     * eg:/a/b/c/ or a/b/c
+     * @param pathSegment
+     * @return
+     */
+    Builder& AddEncodedPathSegments(const std::string& pathSegment);
+    /// TODO: fixme
+    ///Builder& AddPathSegments(const std::string& pathSegment);
+
+    Builder& SetEncodedPathSegment(int index, const std::string& pathSegment);
+
+    /// TODO: fixme
+    ///Builder& SetPathSegment(int index, const std::string& pathSegment);
+
+    Builder& RemovePathSegment(int index);
+
+    Builder& AddEncodedQueryParameter(const std::string& name, const std::string& value);
+
+    Builder& RemoveEncodedQueryParameter(const std::string& name, const std::string& value);
+
+    Builder& RemoveEncodedQueryParameter(const std::string& name);
+
+    Builder& AddEncodedFragment(const std::string& fragment);
+
+    HttpUrl Build();
+
+
+  private:
+    void Pop();
+
+    void Push(const std::string& segment);
+  private:
+    friend class HttpUrl;
+    std::string scheme_;
+    std::string host_;
+    int port_{-1};
+    std::list<std::string> encoded_path_segments_;
+    /// TODO: fixme, name 可能重复， value 可能空
+    std::map<std::string, std::set<std::string>> encoded_query_names_and_values_;
+    std::string encoded_fragment_;
+
+  };
 };
 
 }

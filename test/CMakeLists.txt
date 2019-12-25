@@ -6,4 +6,4 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 add_executable(test ${SRCS})
 
-target_link_libraries(test nb_base nb_math nb_memory libwebrtc_audio_processing.a)
+target_link_libraries(test nb_base nb_net nb_memory libwebrtc_audio_processing.a)
