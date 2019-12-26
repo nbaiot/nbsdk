@@ -13,11 +13,6 @@ using namespace nbsdk::base;
 
 namespace nbsdk::net {
 
-HttpUrl::Builder::Builder() {
-  /// The default path is '/' which needs a trailing space.
-  encoded_path_segments_.emplace_back("");
-}
-
 HttpUrl::Builder &HttpUrl::Builder::Scheme(const std::string &scheme) {
   if (scheme.empty()) {
     LOG_ERROR() << "scheme empty, use default scheme: http";
@@ -85,14 +80,10 @@ HttpUrl::Builder &HttpUrl::Builder::AddEncodedPathSegments(const std::string &pa
  * ["a", "b", "c", ""] ==> ["a", "b", ""]
  */
 void HttpUrl::Builder::Pop() {
-  auto last = --encoded_path_segments_.end();
-  auto it = encoded_path_segments_.erase(last);
-  /// 如果 pop 的是 "", 而且 encoded_path_segments_ 不为 empty, 那么继续 pop
-  /// eg: ["a", "b", "c", ""] ==> ["a", "b", ""]
-  if ((*it).empty() && !encoded_path_segments_.empty()) {
-    encoded_path_segments_.pop_back();
+  if (!encoded_path_segments_.empty()) {
+    auto last = --encoded_path_segments_.end();
+    encoded_path_segments_.erase(last);
   }
-  encoded_path_segments_.emplace_back("");
 }
 
 void HttpUrl::Builder::Push(const std::string &segment) {
@@ -106,8 +97,7 @@ void HttpUrl::Builder::Push(const std::string &segment) {
     Pop();
     return;
   }
-  /// 保证 encoded_path_segments_ 最后一个元素始终为 ""
-  encoded_path_segments_.emplace(--encoded_path_segments_.end(), segment);
+  encoded_path_segments_.emplace_back(segment);
 }
 
 HttpUrl::Builder &HttpUrl::Builder::SetEncodedPathSegment(int index, const std::string &pathSegment) {
@@ -128,11 +118,6 @@ HttpUrl::Builder &HttpUrl::Builder::SetEncodedPathSegment(int index, const std::
     ++it;
   }
   *it = pathSegment;
-
-  /// 保证最后一个元素为 ""
-  if (index == (encoded_path_segments_.size() - 1)) {
-    encoded_path_segments_.emplace_back("");
-  }
   return *this;
 }
 
@@ -141,16 +126,11 @@ HttpUrl::Builder &HttpUrl::Builder::RemovePathSegment(int index) {
     LOG_ERROR() << "unexpected index:" << index;
     return *this;
   }
-  bool isLast = index == (encoded_path_segments_.size() - 1);
   auto it = encoded_path_segments_.begin();
   for (int i = 0; i < index; ++i) {
     ++it;
   }
   encoded_path_segments_.erase(it);
-  /// 保证最后一个元素为 ""
-  if (isLast) {
-    encoded_path_segments_.emplace_back("");
-  }
   return *this;
 }
 
@@ -224,11 +204,11 @@ bool HttpUrl::Builder::Parse(std::string url) {
   url.erase(0, url.find_first_not_of('\f'));
   url.erase(0, url.find_first_not_of('\r'));
 
-  url.erase(url.find_last_not_of(' '));
-  url.erase(url.find_last_not_of('\t'));
-  url.erase(url.find_last_not_of('\n'));
-  url.erase(url.find_last_not_of('\f'));
-  url.erase(url.find_last_not_of('\r'));
+  url.erase(url.find_last_not_of(' ') +  1);
+  url.erase(url.find_last_not_of('\t') + 1);
+  url.erase(url.find_last_not_of('\n') + 1);
+  url.erase(url.find_last_not_of('\f') + 1);
+  url.erase(url.find_last_not_of('\r') + 1);
 
   /// scheme
   auto scheme = url.substr(0, url.find_first_of(':'));
@@ -341,6 +321,65 @@ bool HttpUrl::Builder::Parse(std::string url) {
   return true;
 }
 
+std::string HttpUrl::Builder::ToString() const {
+  std::ostringstream url;
+  url << scheme_;
+  url << "://";
+  /// TODO: fixme, add username and password, eg: username:password@
+
+  /// ipv6
+  if (host_.find(':') != std::string::npos) {
+    url << '[';
+    url << host_;
+    url << ']';
+  } else {
+    url << host_;
+  }
+
+  int port = (port_ == -1) ? DefaultPort(scheme_) : port_;
+  url << ':';
+  url << port;
+
+  for (auto& i: encoded_path_segments_) {
+    url << '/';
+    url << i;
+  }
+
+  if (!encoded_query_names_and_values_.empty()) {
+    url << '?';
+    int paramIndex = 0;
+    for(auto& i : encoded_query_names_and_values_) {
+      auto param = i.first;
+      auto values = i.second;;
+      if (values.empty()) {
+        url << param;
+      } else {
+        int valuesIndex = 0;
+        for(auto & value : values) {
+          url << param;
+          url << '=';
+          url << value;
+          ++valuesIndex;
+          if (valuesIndex < values.size()) {
+            url << '&';
+          }
+        }
+        ++paramIndex;
+        if (paramIndex < encoded_query_names_and_values_.size()) {
+          url << '&';
+        }
+      }
+    }
+  }
+
+  if (!encoded_fragment_.empty()) {
+    url << '#';
+    url << encoded_fragment_;
+  }
+
+  return url.str();
+}
+
 
 int HttpUrl::DefaultPort(const std::string &scheme) {
   if (scheme == "http")
@@ -350,17 +389,35 @@ int HttpUrl::DefaultPort(const std::string &scheme) {
   return -1;
 }
 
-HttpUrl::HttpUrl(std::string url) : url_(std::move(url)) {
-scheme_ = "https";
+HttpUrl::HttpUrl(std::string url) : port_(-1) {
+  Builder builder;
+  builder.Parse(std::move(url));
+  Init(builder);
 }
 
-HttpUrl::HttpUrl(const HttpUrl::Builder &builder) {
+HttpUrl::HttpUrl(const HttpUrl &url) {
+  scheme_ = url.scheme_;
+  host_ = url.host_;
+  port_ = url.port_;
+  path_segments_ = url.path_segments_;
+  query_names_and_values_ = url.query_names_and_values_;
+  fragment_ = url.fragment_;
+  url_ = url.url_;
+}
+
+HttpUrl::HttpUrl(const Builder& builder) : port_(-1) {
+  Init(builder);
+}
+
+void HttpUrl::Init(const Builder &builder) {
   scheme_ = builder.scheme_;
   host_ = builder.host_;
   port_ = builder.port_;
+  /// TODO: decoded
   path_segments_ = builder.encoded_path_segments_;
   query_names_and_values_ = builder.encoded_query_names_and_values_;
   fragment_ = builder.encoded_fragment_;
+  url_ = builder.ToString();
 }
 
 std::string HttpUrl::Scheme() {
@@ -385,7 +442,7 @@ int HttpUrl::PathSize() {
 }
 
 std::string HttpUrl::EncodedPath() {
-  auto pathStart = scheme_.size() + 3;/// ://
+  auto pathStart = url_.find_first_of('/', scheme_.size() + 3);/// ://
   auto pathEnd = url_.find('?');
   if (pathEnd == std::string::npos) {
     pathEnd = url_.find('#');
@@ -397,12 +454,22 @@ std::string HttpUrl::EncodedPath() {
 }
 
 std::string HttpUrl::EncodedQuery() {
-
-  return "std::__cxx11::string()";
+  auto queryStart = url_.find('?');
+  auto queryEnd = url_.find('#');
+  if (queryStart != std::string::npos) {
+    if (queryEnd != std::string::npos) {
+      /// ignore '?', '#'
+      return url_.substr(queryStart + 1, queryEnd - (queryStart + 1));
+    } else {
+      /// ignore '?'
+      return url_.substr(queryStart + 1);
+    }
+  }
+  return "";
 }
 
 int HttpUrl::QuerySize() {
-  return 0;
+  return query_names_and_values_.size();
 }
 
 std::set<std::string> HttpUrl::QueryParameter() {
@@ -412,4 +479,9 @@ std::set<std::string> HttpUrl::QueryParameter() {
 std::string HttpUrl::EncodedFragment() {
   return fragment_;
 }
+
+std::string HttpUrl::Url() {
+  return url_;
+}
+
 }
