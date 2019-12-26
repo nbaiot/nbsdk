@@ -21,14 +21,15 @@ struct ResponseBody {
 
 };
 
-class Builder {
-
-};
-
 /// boost::beast::http::response
 /// boost::beast::http::header
 
 class HttpResponse {
+
+public:
+  class Builder {
+
+  };
 
 private:
   HttpProtocol protocol_;
